@@ -1,20 +1,20 @@
-CREATE TABLE IF NOT EXISTS departamentos (
+CREATE TABLE IF NOT EXISTS productos (
     id SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL
+    nombre VARCHAR(100) NOT NULL,
+    precio DECIMAL(10,2) NOT NULL,
+    stock INTEGER NOT NULL,
+    categoria VARCHAR(50)
 );
 
 CREATE TABLE IF NOT EXISTS empleados (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    apellido VARCHAR(100) NOT NULL,
-    email VARCHAR(150),
-    edad INT,
-    departamento_id INT REFERENCES departamentos(id)
+    email VARCHAR(100) NOT NULL,
+    departamento_id INTEGER NOT NULL,
+    fecha_contratacion DATE NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS productos (
+CREATE TABLE IF NOT EXISTS departamentos (
     id SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    precio NUMERIC(10,2),
-    stock INT
+    nombre VARCHAR(100) NOT NULL
 );
