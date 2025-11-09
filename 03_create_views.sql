@@ -1,43 +1,56 @@
--- 1. Función para calcular descuento
+-- Calcular descuento aplicado a un producto
 CREATE OR REPLACE FUNCTION calcular_descuento(
-    precio_original NUMERIC, 
-    porcentaje_descuento NUMERIC
-)
-RETURNS NUMERIC AS $$
+    precio_original DECIMAL,
+    porcentaje_descuento DECIMAL
+) RETURNS DECIMAL AS $$
 BEGIN
+    IF porcentaje_descuento < 0 OR porcentaje_descuento > 100 THEN
+        RAISE EXCEPTION 'El porcentaje de descuento debe estar entre 0 y 100';
+    END IF;
+    
     RETURN precio_original * (1 - porcentaje_descuento / 100);
 END;
 $$ LANGUAGE plpgsql;
 
--- 2. Función para validar correo electrónico
-CREATE OR REPLACE FUNCTION validar_correo(correo TEXT)
-RETURNS BOOLEAN AS $$
+-- Validar si un correo electrónico contiene '@'
+CREATE OR REPLACE FUNCTION validar_email(
+    texto VARCHAR
+) RETURNS BOOLEAN AS $$
 BEGIN
-    RETURN correo LIKE '%@%';
+    RETURN texto LIKE '%@%';
 END;
 $$ LANGUAGE plpgsql;
 
--- 3. Función para productos con stock bajo
-CREATE OR REPLACE FUNCTION productos_stock_bajo(limite_stock INT)
-RETURNS TABLE(
-    id INT, 
-    nombre TEXT, 
-    stock INT, 
-    precio NUMERIC
+-- Devolver productos con stock menor a un valor dado
+CREATE OR REPLACE FUNCTION productos_stock_bajo(
+    cantidad_minima INTEGER
+) RETURNS TABLE(
+    id_producto INTEGER,
+    nombre_producto VARCHAR,
+    precio_producto DECIMAL,
+    stock_actual INTEGER,
+    categoria_producto VARCHAR
 ) AS $$
 BEGIN
-    RETURN QUERY 
-    SELECT p.id, p.nombre, p.stock, p.precio 
-    FROM productos p 
-    WHERE p.stock < limite_stock;
+    RETURN QUERY
+    SELECT 
+        p.id,
+        p.nombre,
+        p.precio,
+        p.stock,
+        p.categoria
+    FROM productos p
+    WHERE p.stock < cantidad_minima
+    ORDER BY p.stock ASC;
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. Función para obtener día de la semana
-CREATE OR REPLACE FUNCTION obtener_dia_semana(fecha DATE)
-RETURNS TEXT AS $$
+-- Recibir una fecha y devolver el día de la semana
+CREATE OR REPLACE FUNCTION obtener_dia_semana(
+    fecha DATE
+) RETURNS VARCHAR AS $$
 DECLARE
-    dia_texto TEXT;
+    dia_semana VARCHAR;
 BEGIN
     SELECT 
         CASE EXTRACT(DOW FROM fecha)
@@ -48,84 +61,23 @@ BEGIN
             WHEN 4 THEN 'Jueves'
             WHEN 5 THEN 'Viernes'
             WHEN 6 THEN 'Sábado'
-        END INTO dia_texto;
+        END INTO dia_semana;
     
-    RETURN dia_texto;
+    RETURN dia_semana;
 END;
 $$ LANGUAGE plpgsql;
 
--- 5. Función para contar empleados por departamento
-CREATE OR REPLACE FUNCTION contar_empleados_departamento(dep_id INT)
-RETURNS INT AS $$
+-- Contar cuántos empleados hay en un departamento
+CREATE OR REPLACE FUNCTION contar_empleados_departamento(
+    id_departamento INTEGER
+) RETURNS INTEGER AS $$
 DECLARE
-    total_empleados INT;
+    total_empleados INTEGER;
 BEGIN
     SELECT COUNT(*) INTO total_empleados
-    FROM empleados 
-    WHERE departamento_id = dep_id;
+    FROM empleados
+    WHERE departamento_id = id_departamento;
     
     RETURN total_empleados;
 END;
 $$ LANGUAGE plpgsql;
-
--- 6. Función para calcular el IVA (del ejemplo)
-CREATE OR REPLACE FUNCTION calcular_iva(monto NUMERIC, tasa NUMERIC DEFAULT 0.16)
-RETURNS NUMERIC AS $$
-BEGIN
-    RETURN monto * tasa;
-END;
-$$ LANGUAGE plpgsql;
-
--- 7. Función para obtener nombre completo (del ejemplo)
-CREATE OR REPLACE FUNCTION nombre_completo(nombre TEXT, apellido TEXT)
-RETURNS TEXT AS $$
-BEGIN
-    RETURN nombre || ' ' || apellido;
-END;
-$$ LANGUAGE plpgsql;
-
--- 8. Función para verificar mayoría de edad (del ejemplo)
-CREATE OR REPLACE FUNCTION es_mayor_de_edad(edad INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN edad >= 18;
-END;
-$$ LANGUAGE plpgsql;
-
--- 9. Función de tabla: empleados por departamento (del ejemplo)
-CREATE OR REPLACE FUNCTION empleados_por_departamento(dep_id INT)
-RETURNS TABLE(id INT, nombre TEXT) AS $$
-BEGIN
-    RETURN QUERY SELECT e.id, e.nombre FROM empleados e WHERE e.departamento_id = dep_id;
-END;
-$$ LANGUAGE plpgsql;
-
-
--- Vista para empleados con información completa
-CREATE OR REPLACE VIEW vista_empleados_completa AS
-SELECT 
-    e.id,
-    e.nombre,
-    e.apellido,
-    e.email,
-    e.edad,
-    d.nombre as departamento,
-    es_mayor_de_edad(e.edad) as es_mayor_edad,
-    nombre_completo(e.nombre, e.apellido) as nombre_completo
-FROM empleados e
-LEFT JOIN departamentos d ON e.departamento_id = d.id;
-
--- Vista para productos con información de stock
-CREATE OR REPLACE VIEW vista_productos_stock AS
-SELECT 
-    id,
-    nombre,
-    precio,
-    stock,
-    calcular_descuento(precio, 10) as precio_con_descuento_10,
-    CASE 
-        WHEN stock < 5 THEN 'CRÍTICO'
-        WHEN stock < 10 THEN 'BAJO'
-        ELSE 'NORMAL'
-    END as estado_stock
-FROM productos;
