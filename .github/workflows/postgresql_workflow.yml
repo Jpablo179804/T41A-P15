@@ -31,7 +31,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.X'
+        python-version: '3.11'  # Cambiar a versión compatible
 
     - name: Install dependencies
       run: |
@@ -40,7 +40,10 @@ jobs:
 
     - name: Wait for PostgreSQL
       run: |
-        sleep 10
+        for i in {1..10}; do
+          pg_isready -h localhost -p 5432 && break
+          sleep 2
+        done
 
     - name: Set up database schema and data
       run: |
@@ -56,4 +59,4 @@ jobs:
         
     - name: Run tests
       run: |
-        pytest
+        pytest test_functions.py -v
